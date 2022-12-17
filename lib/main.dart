@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:space_cinema/pages/login.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 

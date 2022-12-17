@@ -36,8 +36,8 @@ class _LoginState extends State<Login>{
       if( data["success"] ){
         final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
         sharedPreferences.setString("username", username);
-
-        Navigator.push( context, MaterialPageRoute(builder: (context) => HomePage( username: username )));
+        sharedPreferences.setStringList("waitingList", []);
+        Navigator.push( context, MaterialPageRoute(builder: (context) => HomePage( )));
       }
     }
   }

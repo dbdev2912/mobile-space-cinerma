@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+// import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/BASE_URL.dart';
@@ -19,6 +22,11 @@ class _FilmState extends State<Film>{
 
   late String buttonLabel;
   late dynamic film;
+  // late StreamSubscription<ConnectivityResult> subscription;
+
+  final Connectivity _connectivity = Connectivity();
+
+  dynamic dataQueue = [];
 
   Future ticketTransaction() async {
     var req_url = "/api/cancel/ticket";
@@ -28,31 +36,96 @@ class _FilmState extends State<Film>{
 
     final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     final obtainUsername = sharedPreferences.getString("username");
+    final waitingList = sharedPreferences.getStringList("waitingList");
+    var connected = await _connectivity.checkConnectivity();
 
-    var response = await Session().post(BASE_URL+req_url,
-        jsonEncode(<String, String>{
-          "id": film["film_id"].toString(),
+    if( connected != ConnectivityResult.none ){
+      var response = await Session().post(BASE_URL+req_url,
+          jsonEncode(<String, String>{
+            "id": film["film_id"].toString(),
             "user_obj": jsonEncode(<String, String?>{
-                "username": obtainUsername
-              }
-          )
-        })
-    );
-    if( response["success"]  ){
+              "username": obtainUsername
+            })
+          })
+      );
+      if( response["success"]  ){
+        setState(() {
+          film["is_registed"] = !film["is_registed"];
+          buttonLabel = film["is_registed"] ? "Cancel my ticket" : "Get my ticket";
+        });
+      }
+    }
+
+    else{
+      dynamic tempData = jsonEncode(<String, String>{
+          "id": film["film_id"].toString(),
+          "action": !film["is_registed"] ? "true" : "false",
+          "username": obtainUsername!
+        });
+
+      waitingList!.add(tempData);
+      sharedPreferences.setStringList("waitingList", waitingList);
+
       setState(() {
         film["is_registed"] = !film["is_registed"];
         buttonLabel = film["is_registed"] ? "Cancel my ticket" : "Get my ticket";
       });
     }
+    //   dynamic tempData;
+    //   tempData["url"] = req_url;
+    //   tempData["body"] = jsonEncode(<String, String>{
+    //     "id": film["film_id"].toString(),
+    //     "user_obj": jsonEncode(<String, String?>{
+    //       "username": obtainUsername
+    //     })
+    //   });
+    //   print("Temporary data");
+    //   print(tempData);
+    //
+    //   var waitingList = sharedPreferences.getStringList('waitingList');
+    //   waitingList?.add(tempData);
+    //   sharedPreferences.setStringList("waitingList", waitingList!);
+    //
+
   }
 
   @override
   void initState() {
     super.initState();
+
     setState(() {
+
       film = widget.film;
       buttonLabel = film["is_registed"] ? "Cancel my ticket" : "Get my ticket";
+
+      // subscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+        // resendData(result);
+      // });
     });
+  }
+
+  // void resendData(ConnectivityResult result) async{
+  //   // print("Connectivity change");
+  //   if( result != ConnectivityResult.none ){
+  //     final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+  //     final obtainUsername = sharedPreferences.getString("username");
+  //     for( var i = 0; i < dataQueue.length; i++ ){
+  //       var data = jsonDecode(dataQueue[i]);
+  //       await Session().post(BASE_URL+data["url"], data["body"] );
+  //       print("Sent de fucking queue data!");
+  //     }
+  //
+  //     setState(() {
+  //       dataQueue = [];
+  //
+  //     });
+  //   }
+  // }
+
+  @override
+  dispose() {
+    super.dispose();
+    // subscription.cancel();
   }
 
   @override

@@ -1,19 +1,58 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:space_cinema/services/BASE_CONFIG.dart';
 import 'package:space_cinema/widgets/drawer.dart';
 
 import '../services/BASE_URL.dart';
+import '../services/session.dart';
 
 
+class HomePage extends StatefulWidget {
+  HomePage({ Key? key }) : super(key: key);
+  @override
+  _HomeState createState() => _HomeState();
+}
 
-class HomePage extends StatelessWidget{
-  HomePage({ Key? key, required this.username }) : super( key: key );
-  final String username;
-
+class _HomeState extends State<HomePage>{
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  final Connectivity _connectivity = Connectivity();
+  late StreamSubscription<ConnectivityResult> subscription;
 
   @override
+  void initState(){
+    super.initState();
+    subscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+      resendData();
+    });
+  }
 
+  void resendData() async {
+    final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    final waitingList = sharedPreferences.getStringList("waitingList");
+    print("Connection Change and de fuking update state offline ");
+    await Future.delayed(Duration(seconds: 3));
+
+    await Session().post("$BASE_SERVER_URL/api/update/offline/data", jsonEncode(<String, String>{
+        "data": waitingList.toString(),
+      })
+    );
+    sharedPreferences.setStringList("waitingList", []);
+  }
+
+  @override
+  void dispose() {
+
+    super.dispose();
+    subscription.cancel();
+  }
+
+
+  @override
   Widget build(BuildContext context){
     return Scaffold(
         key: scaffoldKey,
